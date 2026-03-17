@@ -133,7 +133,7 @@ export const RequestChart: React.FC = () => {
             tickLine={false}
           />
           <YAxis
-            tickFormatter={(v) => `${(v / 1e6).toFixed(0)}M`}
+            tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}K` : String(v)}
             tick={{ fill: '#334155', fontSize: 11 }}
             axisLine={false}
             tickLine={false}
