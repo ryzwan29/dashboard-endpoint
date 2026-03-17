@@ -5,6 +5,7 @@ import { useLatency } from '../hooks/useLatency'
 import { useLiveRps } from '../hooks/useLiveRps'
 import { Avatar } from '../components/Avatar'
 import { EndpointCard } from '../components/EndpointCard'
+import { CopyPeers } from '../components/CopyPeers'
 import { StakeBanner } from '../components/StakeBanner'
 import { RequestChart } from '../components/RequestChart'
 
@@ -19,12 +20,12 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, live, highlight }) =>
   <div style={{
     background: 'rgba(255,255,255,0.025)',
     border: `1px solid ${highlight ? 'rgba(77,136,255,0.3)' : 'rgba(255,255,255,0.06)'}`,
-    borderRadius: 12, padding: '18px 20px', transition: 'all 0.2s',
+    borderRadius: 12, padding: '14px 16px', transition: 'all 0.2s',
   }}>
     <div style={{
-      fontSize: 11, fontWeight: 600, color: '#4a5568',
+      fontSize: 10, fontWeight: 600, color: '#4a5568',
       textTransform: 'uppercase', letterSpacing: '0.07em',
-      marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5,
+      marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5,
     }}>
       {live && <span style={{
         width: 5, height: 5, borderRadius: '50%', background: '#22c55e',
@@ -34,7 +35,7 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, live, highlight }) =>
       {label}
     </div>
     <div style={{
-      fontSize: 22, fontWeight: 700,
+      fontSize: 18, fontWeight: 700,
       color: highlight ? '#7aadff' : '#f1f5f9',
       fontFamily: "'Space Mono', monospace", lineHeight: 1,
     }}>
@@ -64,8 +65,6 @@ export const MainContent: React.FC = () => {
   const statCurRps    = isLive ? fmtNum(liveRps)                    : net.stats.curRps
   const statBlockTime = isLive ? stats!.blockTime.toFixed(2) + 's'  : net.stats.blockTime
 
-  // Prefer latency from stats API (measured server-side, more accurate)
-  // Fall back to browser ping result
   const latMs = latency.ms
   const isOnline = isLive ? !stats?.syncing : latency.status !== 'offline'
 
@@ -77,32 +76,45 @@ export const MainContent: React.FC = () => {
     : latMs < 100 ? '#22c55e' : latMs < 300 ? '#f59e0b' : '#ef4444'
 
   return (
-    <main style={{ flex: 1, overflowY: 'auto', padding: '32px 36px', zIndex: 1 }}>
-      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
+    <main style={{ flex: 1, padding: '24px 20px', zIndex: 1 }}>
+      <style>{`
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+        @media (max-width: 768px) {
+          .main-header-title { font-size: 22px !important; }
+          .main-padding { padding: 16px 14px !important; }
+          .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+      `}</style>
 
       {/* Header */}
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 14 }}>
-          <Avatar net={net} size={52} />
-          <div>
-            <h1 style={{
-              fontSize: 30, fontWeight: 800, margin: 0, lineHeight: 1.2,
-              color: '#f8fafc', letterSpacing: '-0.02em',
-            }}>
+      <div className="main-padding" style={{ marginBottom: 20, padding: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12, flexWrap: 'wrap' }}>
+          <Avatar net={net} size={44} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1
+              className="main-header-title"
+              style={{
+                fontSize: 26, fontWeight: 800, margin: 0, lineHeight: 1.2,
+                color: '#f8fafc', letterSpacing: '-0.02em',
+              }}
+            >
               RPC Gateway to{' '}
-              <span style={{ color: net.color }}>
-                {net.title}
-              </span>
+              <span style={{ color: net.color }}>{net.title}</span>
             </h1>
-            <p style={{ margin: '6px 0 0', color: '#475569', fontSize: 14 }}>
-              Fast, free, and privacy-first RPC endpoint · Connect reliably to Web3
+            <p style={{ margin: '4px 0 0', color: '#475569', fontSize: 13 }}>
+              Fast, free, and privacy-first RPC endpoint
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* Status badges — scroll horizontally on mobile */}
+        <div style={{
+          display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center',
+          overflowX: 'auto', WebkitOverflowScrolling: 'touch',
+          paddingBottom: 2,
+        }}>
           <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
+            display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0,
             background: isOnline ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)',
             border: `1px solid ${isOnline ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}`,
             borderRadius: 20, padding: '4px 12px', fontSize: 12,
@@ -118,7 +130,7 @@ export const MainContent: React.FC = () => {
           </span>
 
           <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
+            display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
             background: 'rgba(77,136,255,0.08)', border: '1px solid rgba(77,136,255,0.18)',
             borderRadius: 20, padding: '4px 12px', fontSize: 12, color: latColor, fontWeight: 600,
           }}>
@@ -126,7 +138,7 @@ export const MainContent: React.FC = () => {
           </span>
 
           <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
+            display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
             background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
             borderRadius: 20, padding: '4px 12px', fontSize: 12, color: '#64748b', fontWeight: 600,
           }}>
@@ -135,7 +147,7 @@ export const MainContent: React.FC = () => {
 
           {isLive && (
             <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
+              display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
               background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)',
               borderRadius: 20, padding: '4px 12px', fontSize: 11, color: '#4ade80', fontWeight: 600,
             }}>
@@ -149,23 +161,30 @@ export const MainContent: React.FC = () => {
       <EndpointCard net={net} />
 
       {/* Stake Banner */}
+      <CopyPeers net={net} />
       <StakeBanner net={net} />
 
       {/* Stats Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 16 }}>
-        <StatCard label="Total Requests" value={statTotal} live={isLive} />
-        <StatCard label="Cached Requests" value={statCached} live={isLive} />
-        <StatCard label="Avg req/sec" value={statAvgRps} />
-        <StatCard label="Current req/sec" value={statCurRps} highlight live />
-        <StatCard label="Avg Block Time" value={statBlockTime} live={isLive} />
+      <div
+        className="stats-grid"
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8, marginBottom: 12 }}
+      >
+        <StatCard label="Total Requests"   value={statTotal}     live={isLive} />
+        <StatCard label="Cached Requests"  value={statCached}    live={isLive} />
+        <StatCard label="Avg req/sec"      value={statAvgRps} />
+        <StatCard label="Current req/sec"  value={statCurRps}    highlight live />
+        <StatCard label="Avg Block Time"   value={statBlockTime} live={isLive} />
       </div>
 
       {/* Extra live row */}
       {isLive && stats && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 16 }}>
-          <StatCard label="Peers" value={String(stats.numPeers)} live />
-          <StatCard label="Memory" value={stats.memUsageMB.toFixed(0) + ' MB'} live />
-          <StatCard label="Goroutines" value={String(stats.goRoutines)} live />
+        <div
+          className="stats-grid"
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8, marginBottom: 12 }}
+        >
+          <StatCard label="Peers"      value={String(stats.numPeers)}              live />
+          <StatCard label="Memory"     value={stats.memUsageMB.toFixed(0) + ' MB'} live />
+          <StatCard label="Goroutines" value={String(stats.goRoutines)}             live />
           {stats.evmBlockNumber !== undefined && (
             <StatCard label="EVM Block" value={fmtNum(stats.evmBlockNumber)} live />
           )}
@@ -173,7 +192,7 @@ export const MainContent: React.FC = () => {
       )}
 
       <RequestChart />
-      <div style={{ height: 32 }} />
+      <div style={{ height: 24 }} />
     </main>
   )
 }
