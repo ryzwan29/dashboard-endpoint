@@ -11,11 +11,11 @@ export interface ChartPoint {
 function mockData(range: ChartRange, networkId: number): ChartPoint[] {
   const n    = range === '24h' ? 24 : range === '7d' ? 7 : 30
   const seed = networkId
-  const base = 50_000 * (0.5 + seed * 0.08)
+  const base = 2_000 * (0.5 + seed * 0.08)
 
   return Array.from({ length: n }, (_, i) => {
-    const wave  = Math.sin(i * 0.9 + seed * 1.3) * 10_000
-    const total = Math.max(5_000, Math.round(base + wave + (Math.random() - 0.5) * 3_000))
+    const wave  = Math.sin(i * 0.9 + seed * 1.3) * 400
+    const total = Math.max(200, Math.round(base + wave + (Math.random() - 0.5) * 200))
     return {
       time:   range === '24h' ? `${String(i).padStart(2, '0')}:00` : `D${i + 1}`,
       total,
