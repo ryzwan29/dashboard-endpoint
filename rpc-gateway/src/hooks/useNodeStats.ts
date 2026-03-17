@@ -15,6 +15,8 @@ export interface NodeStats {
   numPeers:           number
   memUsageMB:         number
   goRoutines:         number
+  evmBlockNumber?:    number
+  evmChainId?:        string
   timestamp:          number
   scrapeOk:           boolean
   scrapeError?:       string
