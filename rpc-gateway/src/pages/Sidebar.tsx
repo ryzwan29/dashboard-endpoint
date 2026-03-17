@@ -14,7 +14,7 @@ export const Sidebar: React.FC = () => {
   return (
     <aside
       style={{
-        width: 220,
+        width: 275,
         background: 'rgba(6,9,20,0.98)',
         borderRight: '1px solid rgba(255,255,255,0.05)',
         display: 'flex',
@@ -55,7 +55,7 @@ export const Sidebar: React.FC = () => {
                 letterSpacing: '-0.01em',
               }}
             >
-              RydOne Public RPC
+              RydOne Public Endpoints
             </div>
             {/* <div
               style={{

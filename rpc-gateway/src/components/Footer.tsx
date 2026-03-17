@@ -48,7 +48,7 @@ export const Footer: React.FC<Props> = ({ mainnetCount, testnetCount }) => {
                 letterSpacing: '0.05em', textTransform: 'uppercase',
               }}
             >
-              RydOne Public RPC
+              RydOne Public Endpoints
             </span>
           </div>
           <p style={{ fontSize: 13, color: '#475569', lineHeight: 1.6, maxWidth: 280, margin: '0 0 14px' }}>
