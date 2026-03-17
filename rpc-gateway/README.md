@@ -1,14 +1,15 @@
-# RPC Gateway Dashboard
+# ⚡ NodeGate — RPC Gateway Dashboard
 
-A modern, fully static RPC endpoint dashboard for multiple blockchain networks — inspired by Alchemy/Infura but lightweight and open.
+A modern, fully-static RPC endpoint dashboard for multiple blockchain networks.
+Inspired by Alchemy / Infura — built lightweight with zero backend.
 
 ## Tech Stack
 
-- React 18 + TypeScript
-- Vite
-- TailwindCSS
-- Zustand (state management)
-- Chart.js + react-chartjs-2
+- **React 18** + **TypeScript**
+- **Vite** (build tool)
+- **TailwindCSS** (utility classes)
+- **Zustand** (global state)
+- **Recharts** (area chart)
 
 ## Getting Started
 
@@ -31,87 +32,61 @@ npm run preview
 ```
 src/
 ├── data/
-│   └── index.ts          ← ALL network configs live here
+│   └── index.ts          ← ALL network configs here (one source of truth)
 ├── components/
-│   ├── Sidebar.tsx        ← Network list + search + toggle
-│   ├── EndpointCard.tsx   ← Tabs + URL display + copy button
-│   ├── StatsGrid.tsx      ← 5 stat cards + time range toggle
-│   └── RequestChart.tsx   ← Chart.js line chart
+│   ├── Avatar.tsx         ← Network icon badge
+│   ├── CopyButton.tsx     ← Clipboard copy button
+│   ├── StatCard.tsx       ← Stats metric card
+│   ├── ChartTooltip.tsx   ← Recharts custom tooltip
+│   ├── EndpointCard.tsx   ← Tabbed endpoint display
+│   └── RequestChart.tsx   ← Area chart with range toggle
 ├── pages/
-│   └── DashboardPage.tsx  ← Main content layout
+│   ├── Sidebar.tsx        ← Left nav: search, mode toggle, network list
+│   └── MainContent.tsx    ← Header, endpoint card, stats, chart
 ├── hooks/
-│   ├── useGatewayStore.ts ← Zustand store (global state)
-│   ├── useChartData.ts    ← Deterministic chart data generator
-│   └── useLiveRps.ts      ← Live req/sec ticker (simulated)
-├── App.tsx
-├── main.tsx
-└── index.css
+│   ├── useStore.ts        ← Zustand store (mode, activeNetwork, tab, range)
+│   ├── useChartData.ts    ← Seeded mock chart data generator
+│   └── useCopy.ts         ← Clipboard hook with copied feedback
+├── App.tsx                ← Root layout
+├── main.tsx               ← Entry point
+└── index.css              ← Tailwind base + global styles
 ```
 
 ## Adding a New Network
 
-**Only edit `src/data/index.ts`** — no other file needs to change.
-
-Add an object to `mainnetNetworks` or `testnetNetworks`:
+Open `src/data/index.ts` and push one object into `mainnetNetworks` or `testnetNetworks`:
 
 ```ts
 {
-  id: 200,                          // unique number
-  title: 'MyChain',
-  chainId: 'mychain-1',
-  ticker: 'MYC',
-  color: '#ff6b35',                 // accent color for the icon
-  status: 'online',                 // 'online' | 'degraded' | 'offline'
-  latency: 45,                      // ms, affects latency badge color
-  rpc:     'https://mychain-rpc.example.com',
-  wss:     'wss://mychain-rpc.example.com',
-  grpc:    'https://mychain-grpc.example.com',
-  grpcWeb: '#',                     // use '#' = tab disabled
-  rest:    'https://mychain-rest.example.com',
-  evm:     '#',                     // '#' = no MetaMask button
-  blockTime: 6.0,
-  totalReqs: 5000000,
-  cachedPct: 45.0,
-  avgRps: 58,
-  curRps: 55,
+  id: 13,                          // must be unique within the array
+  title: 'My Network',
+  symbol: 'MYN',
+  color: '#FF6B6B',                // brand hex color
+  rpc:     'https://my-rpc.example.com',
+  wss:     'wss://my-rpc.example.com',
+  rest:    'https://my-rest.example.com',
+  grpc:    'my-grpc.example.com:443',
+  grpcWeb: 'https://my-grpc.example.com',
+  evm:     '#',                    // '#' = disabled tab
+  stats: {
+    total:     '1,000,000',
+    cached:    '50.00',
+    avgRps:    '1,000',
+    curRps:    '900',
+    blockTime: '5.00s',
+  },
 }
 ```
 
-That's it. The sidebar, tabs, stats, and chart all update automatically.
+That's it — the sidebar, endpoint card, and stats all update automatically.
 
 ## Features
 
-- **Sidebar** — searchable network list, Mainnet/Testnet toggle, status dots
-- **Endpoint tabs** — RPC, WS RPC, gRPC, gRPC-Web, REST, EVM (auto-disabled if `"#"`)
-- **Copy button** — copies endpoint to clipboard with feedback
-- **MetaMask button** — `wallet_addEthereumChain` for EVM networks
-- **Stats cards** — Total Requests, Cached %, Avg req/sec, Live req/sec, Block Time
-- **Time range** — 24h / 7d / 30d toggle
-- **Live req/sec** — simulated jitter ticker every 3s
-- **Latency badge** — green (<40ms) / yellow (<80ms) / red (≥80ms)
-- **Responsive** — desktop-first, collapses gracefully on smaller screens
-
-## Real Latency (Live Ping)
-
-Latency is measured in real-time directly from the browser — no backend needed.
-
-**How it works:**
-- On network select → immediately sends a ping to the RPC endpoint
-- Re-pings every **15 seconds** automatically
-- For EVM chains: sends `eth_blockNumber` JSON-RPC call (tiny payload)
-- For Cosmos/non-EVM chains: hits the `/cosmos/base/tendermint/v1beta1/node_info` REST endpoint
-- Timeout after **8 seconds** → marks as Offline
-
-**LatencyBadge colors:**
-| Range | Color |
-|-------|-------|
-| < 100ms | Green |
-| 100–300ms | Yellow |
-| > 300ms | Red |
-| Unreachable | Red / Offline |
-
-**Sparkline** — the badge shows a mini SVG sparkline of the last 20 ping measurements.
-
-**Note on CORS:** Some RPC endpoints may block browser fetch due to CORS policy.
-In that case the ping will fail and show "Offline" even if the endpoint is up.
-This is a browser security limitation — the endpoint still works for your dApp.
+- 🌐 12 mainnet + 5 testnet networks out of the box
+- 🔍 Sidebar search filter
+- 🔀 Mainnet / Testnet toggle
+- 📋 One-click endpoint copy (RPC, WS, gRPC, gRPC-Web, REST, EVM)
+- ⚠️ Auto-disabled tabs when endpoint is `"#"`
+- 📊 Area chart with 24h / 7d / 30d range
+- 🎨 Dark theme with blue grid overlay + glassmorphism cards
+- ⚡ Status, latency, and block time badges

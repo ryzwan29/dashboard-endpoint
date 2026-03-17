@@ -1,17 +1,16 @@
 import { useState, useEffect } from 'react'
-import { Network } from '../data'
 
-export function useLiveRps(network: Network): number {
-  const [rps, setRps] = useState(network.curRps)
+export function useLiveRps(curRps: number): number {
+  const [rps, setRps] = useState(curRps)
 
   useEffect(() => {
-    setRps(network.curRps)
+    setRps(curRps)
     const interval = setInterval(() => {
-      const jitter = Math.round((Math.random() - 0.5) * network.curRps * 0.06)
-      setRps(network.curRps + jitter)
+      const jitter = Math.round((Math.random() - 0.5) * Math.max(curRps, 10) * 0.06)
+      setRps(curRps + jitter)
     }, 3000)
     return () => clearInterval(interval)
-  }, [network.id, network.curRps])
+  }, [curRps])
 
   return rps
 }

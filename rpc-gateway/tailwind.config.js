@@ -4,26 +4,18 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Syne', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        syne: ['Syne', 'sans-serif'],
+        mono: ['Space Mono', 'monospace'],
       },
       colors: {
         bg: {
-          DEFAULT: '#080c14',
-          2: '#0d1422',
-          3: '#111827',
-        },
-        surface: {
-          DEFAULT: '#131d2e',
-          2: '#1a2540',
+          base: '#05080f',
+          side: '#060914',
+          card: 'rgba(255,255,255,0.02)',
         },
         border: {
-          DEFAULT: '#1e2d47',
-          2: '#243550',
-        },
-        accent: {
-          DEFAULT: '#3b7de8',
-          2: '#5a95f5',
+          soft: 'rgba(255,255,255,0.07)',
+          muted: 'rgba(255,255,255,0.05)',
         },
       },
     },

@@ -1,151 +1,161 @@
-import React, { useRef, useEffect } from 'react'
+import React from 'react'
 import {
-  Chart,
-  LineElement,
-  PointElement,
-  LineController,
-  CategoryScale,
-  LinearScale,
-  Filler,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
   Tooltip,
-  Legend,
-} from 'chart.js'
-import { Network, TimeRange } from '../data'
+  CartesianGrid,
+  ResponsiveContainer,
+} from 'recharts'
+import { useDashboardStore, ChartRange } from '../hooks/useStore'
 import { useChartData } from '../hooks/useChartData'
+import { ChartTooltip } from './ChartTooltip'
 
-Chart.register(LineElement, PointElement, LineController, CategoryScale, LinearScale, Filler, Tooltip, Legend)
+const RANGES: ChartRange[] = ['24h', '7d', '30d']
 
-function fmtNum(n: number): string {
-  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B'
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'
-  if (n >= 1e3) return (n / 1e3).toFixed(0) + 'K'
-  return String(Math.round(n))
-}
-
-const TIME_LABELS: Record<TimeRange, string> = {
-  '24h': 'Last 24 hours',
-  '7d': 'Last 7 days',
-  '30d': 'Last 30 days',
-}
-
-interface Props {
-  network: Network
-  timeRange: TimeRange
-}
-
-export const RequestChart: React.FC<Props> = ({ network, timeRange }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const chartRef = useRef<Chart | null>(null)
-  const { labels, total, cached } = useChartData(network, timeRange)
-
-  useEffect(() => {
-    if (!canvasRef.current) return
-    if (chartRef.current) chartRef.current.destroy()
-
-    chartRef.current = new Chart(canvasRef.current, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Total',
-            data: total,
-            borderColor: '#3b7de8',
-            backgroundColor: 'rgba(59,125,232,0.08)',
-            borderWidth: 2,
-            fill: true,
-            tension: 0.4,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            pointHoverBackgroundColor: '#3b7de8',
-          },
-          {
-            label: 'Cached',
-            data: cached,
-            borderColor: '#22c55e',
-            backgroundColor: 'rgba(34,197,94,0.06)',
-            borderWidth: 1.5,
-            fill: true,
-            tension: 0.4,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            pointHoverBackgroundColor: '#22c55e',
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#131d2e',
-            borderColor: '#1e2d47',
-            borderWidth: 1,
-            titleColor: '#94a3b8',
-            bodyColor: '#e2e8f0',
-            titleFont: { family: 'JetBrains Mono', size: 11 },
-            bodyFont: { family: 'JetBrains Mono', size: 12 },
-            padding: 10,
-            callbacks: {
-              label: (ctx) => `  ${ctx.dataset.label}: ${fmtNum(ctx.raw as number)}`,
-            },
-          },
-        },
-        scales: {
-          x: {
-            grid: { color: 'rgba(30,45,71,0.6)' },
-            ticks: { color: '#4a5568', font: { family: 'JetBrains Mono', size: 10 }, maxTicksLimit: 8 },
-          },
-          y: {
-            grid: { color: 'rgba(30,45,71,0.6)' },
-            ticks: {
-              color: '#4a5568',
-              font: { family: 'JetBrains Mono', size: 10 },
-              callback: (v) => fmtNum(v as number),
-            },
-          },
-        },
-      },
-    })
-
-    return () => {
-      chartRef.current?.destroy()
-    }
-  }, [network.id, timeRange])
+export const RequestChart: React.FC = () => {
+  const { chartRange, activeNetwork, setChartRange } = useDashboardStore()
+  const data = useChartData(chartRange, activeNetwork.id)
 
   return (
     <div
       style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 14,
-        padding: 20,
+        background: 'rgba(255,255,255,0.02)',
+        border: '1px solid rgba(255,255,255,0.07)',
+        borderRadius: 16,
+        padding: 24,
       }}
     >
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <div style={{ display: 'flex', gap: 16 }}>
-          {[
-            { color: '#3b7de8', label: 'Total Requests' },
-            { color: '#22c55e', label: 'Cached Requests' },
-          ].map(({ color, label }) => (
-            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
-              <span style={{ fontSize: 11, color: 'var(--text2)', fontFamily: 'var(--mono)' }}>{label}</span>
-            </div>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 16,
+          flexWrap: 'wrap',
+          gap: 12,
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#e2e8f0' }}>
+            Request Volume
+          </div>
+          <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>
+            Total & cached requests over time
+          </div>
+        </div>
+
+        {/* Range Buttons */}
+        <div style={{ display: 'flex', gap: 4 }}>
+          {RANGES.map((r) => (
+            <button
+              key={r}
+              onClick={() => setChartRange(r)}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 8,
+                border: 'none',
+                background:
+                  chartRange === r
+                    ? 'rgba(77,136,255,0.18)'
+                    : 'rgba(255,255,255,0.04)',
+                color: chartRange === r ? '#7aadff' : '#64748b',
+                fontSize: 12,
+                fontWeight: chartRange === r ? 700 : 500,
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+                outline: chartRange === r ? '1px solid rgba(77,136,255,0.28)' : 'none',
+                fontFamily: 'inherit',
+              }}
+            >
+              {r}
+            </button>
           ))}
         </div>
-        <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
-          {TIME_LABELS[timeRange]}
-        </span>
+      </div>
+
+      {/* Legend */}
+      <div style={{ display: 'flex', gap: 16, marginBottom: 14 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: 12,
+            color: '#64748b',
+          }}
+        >
+          <div
+            style={{ width: 10, height: 10, borderRadius: 2, background: '#4d88ff' }}
+          />
+          Total Requests
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: 12,
+            color: '#64748b',
+          }}
+        >
+          <div
+            style={{ width: 10, height: 10, borderRadius: 2, background: '#22d3ee' }}
+          />
+          Cached Requests
+        </div>
       </div>
 
       {/* Chart */}
-      <div style={{ position: 'relative', height: 200 }}>
-        <canvas ref={canvasRef} />
-      </div>
+      <ResponsiveContainer width="100%" height={200}>
+        <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
+          <defs>
+            <linearGradient id="gTotal" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#4d88ff" stopOpacity={0.4} />
+              <stop offset="100%" stopColor="#4d88ff" stopOpacity={0.02} />
+            </linearGradient>
+            <linearGradient id="gCached" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.3} />
+              <stop offset="100%" stopColor="#22d3ee" stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke="rgba(255,255,255,0.04)"
+            vertical={false}
+          />
+          <XAxis
+            dataKey="time"
+            tick={{ fill: '#334155', fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis
+            tickFormatter={(v) => `${(v / 1e6).toFixed(0)}M`}
+            tick={{ fill: '#334155', fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+            width={38}
+          />
+          <Tooltip content={<ChartTooltip />} />
+          <Area
+            type="monotone"
+            dataKey="total"
+            stroke="#4d88ff"
+            strokeWidth={2}
+            fill="url(#gTotal)"
+          />
+          <Area
+            type="monotone"
+            dataKey="cached"
+            stroke="#22d3ee"
+            strokeWidth={1.5}
+            fill="url(#gCached)"
+          />
+        </AreaChart>
+      </ResponsiveContainer>
     </div>
   )
 }
