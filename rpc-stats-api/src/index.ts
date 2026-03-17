@@ -1,484 +1,92 @@
-// ============================================================
-// /src/data/index.ts
-// ALL network configuration lives here.
-// To add a new network: append an object to mainnetNetworks
-// or testnetNetworks. No other file needs to change.
-// ============================================================
+import express from 'express'
+import cors from 'cors'
+import { CHAINS, CHAIN_MAP } from './chains'
+import { buildStats, NetworkStats } from './stats'
 
-export type NetworkStatus = 'online' | 'degraded' | 'offline'
+const PORT            = parseInt(process.env.PORT            ?? '3001')
+const SCRAPE_INTERVAL = parseInt(process.env.SCRAPE_INTERVAL ?? '5000')
+const ALLOWED_ORIGINS =          process.env.ALLOWED_ORIGINS ?? '*'
 
-export interface Network {
-  id: number
-  title: string
-  chainId: string
-  ticker: string
-  color: string
-  status: NetworkStatus
-  latency: number // ms
-  // Endpoints — use "#" to mark as unavailable
-  rpc: string
-  wss: string
-  grpc: string
-  grpcWeb: string
-  rest: string
-  evm: string
-  // Optional: URL of your rpc-stats-api instance for this network
-  // If set, dashboard will fetch live stats instead of using mock data below
-  // e.g. statsApi: 'https://stats.yourdomain.com'
-  statsApi?: string
-  // Stats (fallback mock data — used when statsApi is not set)
-  blockTime: number
-  totalReqs: number
-  cachedPct: number
-  avgRps: number
-  curRps: number
+const app = express()
+
+app.use(cors({
+  origin: ALLOWED_ORIGINS === '*' ? '*' : ALLOWED_ORIGINS.split(',').map(s => s.trim()),
+  methods: ['GET'],
+}))
+
+// ── In-memory cache: chainId → latest stats ──────────────────
+const cache = new Map<string, NetworkStats>()
+
+async function scrapeAll() {
+  await Promise.allSettled(
+    CHAINS.map(async (chain) => {
+      const stats = await buildStats(chain)
+      cache.set(chain.chainId, stats)
+      if (stats.scrapeOk) {
+        console.log(`[${chain.chainId}] block=${stats.latestBlockHeight} peers=${stats.numPeers} rps=${stats.curRps}`)
+      } else {
+        console.warn(`[${chain.chainId}] scrape failed: ${stats.scrapeError}`)
+      }
+    })
+  )
 }
 
-export const mainnetNetworks: Network[] = [
-  {
-    id: 1,
-    title: 'Ethereum',
-    chainId: '1',
-    ticker: 'ETH',
-    color: '#627eea',
-    status: 'online',
-    latency: 18,
-    rpc: 'https://ethereum-rpc.publicnode.com',
-    wss: 'wss://ethereum-rpc.publicnode.com',
-    grpc: 'https://ethereum-grpc.publicnode.com',
-    grpcWeb: 'https://ethereum-grpc-web.publicnode.com',
-    rest: 'https://ethereum-rest.publicnode.com',
-    evm: 'https://ethereum-rpc.publicnode.com',
-    blockTime: 12.14,
-    totalReqs: 2370078771,
-    cachedPct: 52.51,
-    avgRps: 27431,
-    curRps: 25525,
-  },
-  {
-    id: 2,
-    title: 'BSC',
-    chainId: '56',
-    ticker: 'BNB',
-    color: '#f3ba2f',
-    status: 'online',
-    latency: 22,
-    rpc: 'https://bsc-rpc.publicnode.com',
-    wss: 'wss://bsc-rpc.publicnode.com',
-    grpc: 'https://bsc-grpc.publicnode.com',
-    grpcWeb: 'https://bsc-grpc-web.publicnode.com',
-    rest: 'https://bsc-rest.publicnode.com',
-    evm: 'https://bsc-rpc.publicnode.com',
-    blockTime: 3.0,
-    totalReqs: 1850423100,
-    cachedPct: 48.3,
-    avgRps: 21400,
-    curRps: 19800,
-  },
-  {
-    id: 3,
-    title: 'Polygon',
-    chainId: '137',
-    ticker: 'MATIC',
-    color: '#8247e5',
-    status: 'online',
-    latency: 31,
-    rpc: 'https://polygon-bor-rpc.publicnode.com',
-    wss: 'wss://polygon-bor-rpc.publicnode.com',
-    grpc: 'https://polygon-grpc.publicnode.com',
-    grpcWeb: '#',
-    rest: 'https://polygon-rest.publicnode.com',
-    evm: 'https://polygon-bor-rpc.publicnode.com',
-    blockTime: 2.1,
-    totalReqs: 980234500,
-    cachedPct: 61.2,
-    avgRps: 11350,
-    curRps: 10900,
-  },
-  {
-    id: 4,
-    title: 'Base',
-    chainId: '8453',
-    ticker: 'BASE',
-    color: '#0052ff',
-    status: 'online',
-    latency: 19,
-    rpc: 'https://base-rpc.publicnode.com',
-    wss: 'wss://base-rpc.publicnode.com',
-    grpc: '#',
-    grpcWeb: '#',
-    rest: 'https://base-rest.publicnode.com',
-    evm: 'https://base-rpc.publicnode.com',
-    blockTime: 2.0,
-    totalReqs: 720150000,
-    cachedPct: 44.8,
-    avgRps: 8340,
-    curRps: 7900,
-  },
-  {
-    id: 5,
-    title: 'Optimism',
-    chainId: '10',
-    ticker: 'OP',
-    color: '#ff0420',
-    status: 'online',
-    latency: 28,
-    rpc: 'https://optimism-rpc.publicnode.com',
-    wss: 'wss://optimism-rpc.publicnode.com',
-    grpc: '#',
-    grpcWeb: '#',
-    rest: 'https://optimism-rest.publicnode.com',
-    evm: 'https://optimism-rpc.publicnode.com',
-    blockTime: 2.0,
-    totalReqs: 430080000,
-    cachedPct: 55.0,
-    avgRps: 4980,
-    curRps: 4700,
-  },
-  {
-    id: 6,
-    title: 'Avalanche',
-    chainId: '43114',
-    ticker: 'AVAX',
-    color: '#e84142',
-    status: 'online',
-    latency: 35,
-    rpc: 'https://avalanche-c-chain-rpc.publicnode.com',
-    wss: 'wss://avalanche-c-chain-rpc.publicnode.com',
-    grpc: '#',
-    grpcWeb: '#',
-    rest: 'https://avalanche-rest.publicnode.com',
-    evm: 'https://avalanche-c-chain-rpc.publicnode.com',
-    blockTime: 2.0,
-    totalReqs: 320100000,
-    cachedPct: 41.5,
-    avgRps: 3710,
-    curRps: 3500,
-  },
-  {
-    id: 7,
-    title: 'Arbitrum',
-    chainId: '42161',
-    ticker: 'ARB',
-    color: '#28a0f0',
-    status: 'online',
-    latency: 24,
-    rpc: 'https://arbitrum-one-rpc.publicnode.com',
-    wss: 'wss://arbitrum-one-rpc.publicnode.com',
-    grpc: '#',
-    grpcWeb: '#',
-    rest: 'https://arbitrum-rest.publicnode.com',
-    evm: 'https://arbitrum-one-rpc.publicnode.com',
-    blockTime: 0.25,
-    totalReqs: 580320000,
-    cachedPct: 38.7,
-    avgRps: 6710,
-    curRps: 6400,
-  },
-  {
-    id: 8,
-    title: 'Solana',
-    chainId: 'mainnet-beta',
-    ticker: 'SOL',
-    color: '#9945ff',
-    status: 'online',
-    latency: 41,
-    rpc: 'https://solana-rpc.publicnode.com',
-    wss: 'wss://solana-rpc.publicnode.com',
-    grpc: '#',
-    grpcWeb: '#',
-    rest: 'https://solana-rest.publicnode.com',
-    evm: '#',
-    blockTime: 0.4,
-    totalReqs: 1120450000,
-    cachedPct: 33.2,
-    avgRps: 12980,
-    curRps: 12100,
-  },
-  {
-    id: 9,
-    title: 'Cosmos',
-    chainId: 'cosmoshub-4',
-    ticker: 'ATOM',
-    color: '#2e3148',
-    status: 'online',
-    latency: 55,
-    rpc: 'https://cosmos-rpc.publicnode.com',
-    wss: 'wss://cosmos-rpc.publicnode.com',
-    grpc: 'https://cosmos-grpc.publicnode.com',
-    grpcWeb: 'https://cosmos-grpc-web.publicnode.com',
-    rest: 'https://cosmos-rest.publicnode.com',
-    evm: '#',
-    blockTime: 6.5,
-    totalReqs: 210080000,
-    cachedPct: 58.9,
-    avgRps: 2431,
-    curRps: 2200,
-  },
-  {
-    id: 10,
-    title: 'Osmosis',
-    chainId: 'osmosis-1',
-    ticker: 'OSMO',
-    color: '#750bbf',
-    status: 'online',
-    latency: 62,
-    rpc: 'https://osmosis-rpc.publicnode.com',
-    wss: 'wss://osmosis-rpc.publicnode.com',
-    grpc: 'https://osmosis-grpc.publicnode.com',
-    grpcWeb: 'https://osmosis-grpc-web.publicnode.com',
-    rest: 'https://osmosis-rest.publicnode.com',
-    evm: '#',
-    blockTime: 6.0,
-    totalReqs: 98020000,
-    cachedPct: 62.4,
-    avgRps: 1135,
-    curRps: 1050,
-  },
-  {
-    id: 11,
-    title: 'Axone',
-    chainId: 'axone-1',
-    ticker: 'AXONE',
-    color: '#00d4ff',
-    status: 'online',
-    latency: 48,
-    statsApi: 'https://stats.yourdomain.com',  // ← ganti dengan domain/IP lo
-    rpc: 'https://axone-rpc.publicnode.com',
-    wss: 'wss://axone-rpc.publicnode.com',
-    grpc: 'https://axone-grpc.publicnode.com',
-    grpcWeb: 'https://axone-grpc-web.publicnode.com',
-    rest: 'https://axone-rest.publicnode.com',
-    evm: '#',
-    blockTime: 5.8,
-    totalReqs: 45200000,
-    cachedPct: 71.3,
-    avgRps: 523,
-    curRps: 480,
-  },
-  {
-    id: 12,
-    title: 'Injective',
-    chainId: 'injective-1',
-    ticker: 'INJ',
-    color: '#00b4ff',
-    status: 'degraded',
-    latency: 88,
-    rpc: 'https://injective-rpc.publicnode.com',
-    wss: 'wss://injective-rpc.publicnode.com',
-    grpc: 'https://injective-grpc.publicnode.com',
-    grpcWeb: 'https://injective-grpc-web.publicnode.com',
-    rest: 'https://injective-rest.publicnode.com',
-    evm: '#',
-    blockTime: 1.5,
-    totalReqs: 180340000,
-    cachedPct: 45.7,
-    avgRps: 2089,
-    curRps: 1900,
-  },
-  {
-    id: 13,
-    title: 'Aptos',
-    chainId: '1',
-    ticker: 'APT',
-    color: '#04d5bc',
-    status: 'online',
-    latency: 39,
-    rpc: 'https://aptos-rpc.publicnode.com',
-    wss: '#',
-    grpc: '#',
-    grpcWeb: '#',
-    rest: 'https://aptos-rest.publicnode.com',
-    evm: '#',
-    blockTime: 1.0,
-    totalReqs: 88150000,
-    cachedPct: 29.8,
-    avgRps: 1021,
-    curRps: 980,
-  },
-  {
-    id: 14,
-    title: 'Sui',
-    chainId: 'mainnet',
-    ticker: 'SUI',
-    color: '#4da2ff',
-    status: 'online',
-    latency: 33,
-    rpc: 'https://sui-rpc.publicnode.com',
-    wss: 'wss://sui-rpc.publicnode.com',
-    grpc: '#',
-    grpcWeb: '#',
-    rest: 'https://sui-rest.publicnode.com',
-    evm: '#',
-    blockTime: 0.5,
-    totalReqs: 120300000,
-    cachedPct: 37.5,
-    avgRps: 1393,
-    curRps: 1320,
-  },
-  {
-    id: 15,
-    title: 'Gnosis',
-    chainId: '100',
-    ticker: 'GNO',
-    color: '#00a6c4',
-    status: 'online',
-    latency: 44,
-    rpc: 'https://gnosis-rpc.publicnode.com',
-    wss: 'wss://gnosis-rpc.publicnode.com',
-    grpc: '#',
-    grpcWeb: '#',
-    rest: 'https://gnosis-rest.publicnode.com',
-    evm: 'https://gnosis-rpc.publicnode.com',
-    blockTime: 5.0,
-    totalReqs: 65080000,
-    cachedPct: 53.1,
-    avgRps: 754,
-    curRps: 710,
-  },
-]
+// ── Routes ────────────────────────────────────────────────────
 
-export const testnetNetworks: Network[] = [
-  {
-    id: 101,
-    title: 'Sepolia',
-    chainId: '11155111',
-    ticker: 'SEP',
-    color: '#627eea',
-    status: 'online',
-    latency: 20,
-    rpc: 'https://ethereum-sepolia-rpc.publicnode.com',
-    wss: 'wss://ethereum-sepolia-rpc.publicnode.com',
-    grpc: '#',
-    grpcWeb: '#',
-    rest: 'https://ethereum-sepolia-rest.publicnode.com',
-    evm: 'https://ethereum-sepolia-rpc.publicnode.com',
-    blockTime: 12.0,
-    totalReqs: 48200000,
-    cachedPct: 35.2,
-    avgRps: 558,
-    curRps: 530,
-  },
-  {
-    id: 102,
-    title: 'Holesky',
-    chainId: '17000',
-    ticker: 'HOL',
-    color: '#8247e5',
-    status: 'online',
-    latency: 25,
-    rpc: 'https://ethereum-holesky-rpc.publicnode.com',
-    wss: 'wss://ethereum-holesky-rpc.publicnode.com',
-    grpc: '#',
-    grpcWeb: '#',
-    rest: 'https://ethereum-holesky-rest.publicnode.com',
-    evm: 'https://ethereum-holesky-rpc.publicnode.com',
-    blockTime: 12.0,
-    totalReqs: 22100000,
-    cachedPct: 28.8,
-    avgRps: 256,
-    curRps: 240,
-  },
-  {
-    id: 103,
-    title: 'BSC Testnet',
-    chainId: '97',
-    ticker: 'tBNB',
-    color: '#f3ba2f',
-    status: 'online',
-    latency: 30,
-    rpc: 'https://bsc-testnet-rpc.publicnode.com',
-    wss: 'wss://bsc-testnet-rpc.publicnode.com',
-    grpc: '#',
-    grpcWeb: '#',
-    rest: 'https://bsc-testnet-rest.publicnode.com',
-    evm: 'https://bsc-testnet-rpc.publicnode.com',
-    blockTime: 3.0,
-    totalReqs: 31500000,
-    cachedPct: 41.3,
-    avgRps: 365,
-    curRps: 340,
-  },
-  {
-    id: 104,
-    title: 'Safrochain',
-    chainId: 'safro-test-1',
-    ticker: 'SAFRO',
-    color: '#f59e0b',
-    status: 'degraded',
-    latency: 120,
-    statsApi: 'https://stats.yourdomain.com',  // ← ganti dengan domain/IP lo
-    rpc: 'https://safrochain-testnet-rpc.publicnode.com',
-    wss: '#',
-    grpc: 'https://safrochain-testnet-grpc.publicnode.com',
-    grpcWeb: '#',
-    rest: 'https://safrochain-testnet-rest.publicnode.com',
-    evm: '#',
-    blockTime: 8.0,
-    totalReqs: 3200000,
-    cachedPct: 18.5,
-    avgRps: 37,
-    curRps: 30,
-  },
-  {
-    id: 106,
-    title: 'Kiichain',
-    chainId: 'oro_1336-1',
-    ticker: 'KII',
-    color: '#f97316',
-    status: 'online',
-    latency: 45,
-    statsApi: 'https://stats.yourdomain.com',  // ← ganti domain lo
-    rpc:     'https://kiichain-rpc.yourdomain.com',
-    wss:     'wss://kiichain-wss.yourdomain.com',
-    grpc:    'https://kiichain-grpc.yourdomain.com',
-    grpcWeb: '#',
-    rest:    'https://kiichain-rest.yourdomain.com',
-    evm:     'https://kiichain-evm.yourdomain.com',
-    blockTime: 2.0,
-    totalReqs: 10000000,
-    cachedPct: 40.0,
-    avgRps: 115,
-    curRps: 110,
-  },
-  {
-    id: 105,
-    title: 'Polygon Amoy',
-    chainId: '80002',
-    ticker: 'tMATIC',
-    color: '#8247e5',
-    status: 'online',
-    latency: 35,
-    rpc: 'https://polygon-amoy-bor-rpc.publicnode.com',
-    wss: 'wss://polygon-amoy-bor-rpc.publicnode.com',
-    grpc: '#',
-    grpcWeb: '#',
-    rest: 'https://polygon-amoy-rest.publicnode.com',
-    evm: 'https://polygon-amoy-bor-rpc.publicnode.com',
-    blockTime: 2.0,
-    totalReqs: 15800000,
-    cachedPct: 44.1,
-    avgRps: 183,
-    curRps: 175,
-  },
-]
+// Health — shows status of all chains
+app.get('/health', (_req, res) => {
+  const chains = CHAINS.map((c) => {
+    const s = cache.get(c.chainId)
+    return { chainId: c.chainId, name: c.name, ok: s?.scrapeOk ?? false }
+  })
+  res.json({ ok: true, uptime: process.uptime(), chains })
+})
 
-// Tab definitions — order matters (shown left to right)
-export type TabKey = 'rpc' | 'wss' | 'grpc' | 'grpcWeb' | 'rest' | 'evm'
+// All chains summary
+app.get('/api/stats', (_req, res) => {
+  if (cache.size === 0) {
+    return res.status(503).json({ error: 'Not ready yet, try again in a few seconds' })
+  }
+  res.json(Object.fromEntries(cache))
+})
 
-export interface TabDef {
-  key: TabKey
-  label: string
-  field: keyof Pick<Network, 'rpc' | 'wss' | 'grpc' | 'grpcWeb' | 'rest' | 'evm'>
-}
+// Single chain stats — used by dashboard per network
+app.get('/api/stats/:chainId', (req, res) => {
+  const { chainId } = req.params
+  if (!CHAIN_MAP.has(chainId)) {
+    return res.status(404).json({ error: `Unknown chain: ${chainId}` })
+  }
+  const stats = cache.get(chainId)
+  if (!stats) {
+    return res.status(503).json({ error: 'Stats not yet available' })
+  }
+  res.json(stats)
+})
 
-export const TABS: TabDef[] = [
-  { key: 'rpc',     label: 'RPC',          field: 'rpc'     },
-  { key: 'wss',     label: 'WS RPC',       field: 'wss'     },
-  { key: 'grpc',    label: 'gRPC',         field: 'grpc'    },
-  { key: 'grpcWeb', label: 'gRPC-Web',     field: 'grpcWeb' },
-  { key: 'rest',    label: 'REST',         field: 'rest'    },
-  { key: 'evm',     label: 'EVM JSON-RPC', field: 'evm'     },
-]
+// Raw Prometheus passthrough for a specific chain (debugging)
+app.get('/api/raw/:chainId', async (req, res) => {
+  const chain = CHAIN_MAP.get(req.params.chainId)
+  if (!chain) return res.status(404).json({ error: 'Unknown chain' })
 
-export type TimeRange = '24h' | '7d' | '30d'
+  try {
+    const axios = await import('axios')
+    const response = await axios.default.get<string>(
+      `http://localhost:${chain.metricsPort}/metrics`,
+      { timeout: 5000, responseType: 'text' }
+    )
+    res.set('Content-Type', 'text/plain').send(response.data)
+  } catch (e: any) {
+    res.status(502).json({ error: e?.message ?? 'Failed to fetch metrics' })
+  }
+})
+
+// ── Start ─────────────────────────────────────────────────────
+app.listen(PORT, () => {
+  console.log(`\n[rpc-stats-api] Listening on :${PORT}`)
+  console.log(`[rpc-stats-api] Managing ${CHAINS.length} chain(s):`)
+  CHAINS.forEach(c => console.log(`  • ${c.name} (${c.chainId}) → metrics :${c.metricsPort}`))
+  console.log(`[rpc-stats-api] Scrape interval: ${SCRAPE_INTERVAL}ms\n`)
+})
+
+scrapeAll()
+setInterval(scrapeAll, SCRAPE_INTERVAL)
