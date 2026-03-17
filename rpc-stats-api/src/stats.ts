@@ -1,24 +1,23 @@
 import { scrapeMetrics } from './prometheus'
+import { getNginxStats } from './nginxlog'
 import { ChainConfig } from './chains'
 
 export interface NetworkStats {
   chainId:            string
   name:               string
   testnet:            boolean
-  // Endpoint availability flags — frontend uses these to enable/disable tabs
   hasEvm:             boolean
   hasWss:             boolean
-  // Block info
   latestBlockHeight:  number
   blockTime:          number
   syncing:            boolean
-  // Traffic
+  // Traffic — from nginx access log
   totalRequests:      number
   cachedRequests:     number
   cachedPct:          number
   avgRps:             number
   curRps:             number
-  // EVM-specific (only populated if evmPort is set)
+  // EVM extras
   evmBlockNumber?:    number
   evmChainId?:        string
   // Node health
@@ -30,7 +29,7 @@ export interface NetworkStats {
   scrapeError?:       string
 }
 
-// Per-chain rolling sample buffer for RPS
+// Per-chain RPS sample buffer (from nginx)
 interface Sample { ts: number; totalReqs: number }
 const sampleBuffers = new Map<string, Sample[]>()
 const SAMPLE_WINDOW = 60
@@ -49,7 +48,6 @@ function computeRps(chainId: string, current: number): { avgRps: number; curRps:
   return { avgRps: Math.max(0, avgRps), curRps: Math.max(0, curRps) }
 }
 
-// Fetch EVM block number + chainId via eth_blockNumber / eth_chainId JSON-RPC
 async function fetchEvmStats(evmPort: number): Promise<{ evmBlockNumber: number; evmChainId: string } | null> {
   try {
     const axios = await import('axios')
@@ -76,11 +74,14 @@ async function fetchEvmStats(evmPort: number): Promise<{ evmBlockNumber: number;
 export async function buildStats(chain: ChainConfig): Promise<NetworkStats> {
   const prometheusUrl = `http://localhost:${chain.metricsPort}/metrics`
 
-  // Run Prometheus scrape + optional EVM fetch in parallel
   const [metrics, evmStats] = await Promise.all([
     scrapeMetrics(prometheusUrl).catch(() => null),
     chain.evmPort ? fetchEvmStats(chain.evmPort) : Promise.resolve(null),
   ])
+
+  // ── Nginx log stats (real request counts) ──────────────────
+  const nginx = getNginxStats(chain.logFile, chain.chainId)
+  const { avgRps, curRps } = computeRps(chain.chainId, nginx.totalRequests)
 
   if (!metrics) {
     return {
@@ -92,11 +93,11 @@ export async function buildStats(chain: ChainConfig): Promise<NetworkStats> {
       latestBlockHeight: 0,
       blockTime:         0,
       syncing:           false,
-      totalRequests:     0,
+      totalRequests:     nginx.totalRequests,
       cachedRequests:    0,
       cachedPct:         0,
-      avgRps:            0,
-      curRps:            0,
+      avgRps,
+      curRps,
       numPeers:          0,
       memUsageMB:        0,
       goRoutines:        0,
@@ -131,24 +132,9 @@ export async function buildStats(chain: ChainConfig): Promise<NetworkStats> {
     (metrics.get('tendermint_consensus_fast_syncing') ??
      metrics.get('cometbft_blocksync_syncing') ?? 0) === 1
 
-  const totalRequests =
-    metrics.get('tendermint_rpc_request_duration_seconds_count') ??
-    metrics.get('cometbft_rpc_request_duration_seconds_count') ?? 0
-
-  const cachedRequests =
-    metrics.get('rpccache_hits_total') ??
-    metrics.get('rpc_cache_hits_total') ?? 0
-
-  const cachedPct =
-    totalRequests > 0
-      ? parseFloat(((cachedRequests / totalRequests) * 100).toFixed(2))
-      : 0
-
   const memUsageBytes =
     metrics.get('go_memstats_alloc_bytes') ??
     metrics.get('process_resident_memory_bytes') ?? 0
-
-  const { avgRps, curRps } = computeRps(chain.chainId, totalRequests)
 
   return {
     chainId:           chain.chainId,
@@ -159,15 +145,15 @@ export async function buildStats(chain: ChainConfig): Promise<NetworkStats> {
     latestBlockHeight,
     blockTime,
     syncing,
-    totalRequests,
-    cachedRequests,
-    cachedPct,
+    // Real traffic data from nginx
+    totalRequests:     nginx.totalRequests,
+    cachedRequests:    0,   // nginx doesn't track cache — needs proxy cache setup
+    cachedPct:         0,
     avgRps,
     curRps,
     numPeers,
     memUsageMB:        parseFloat((memUsageBytes / 1024 / 1024).toFixed(1)),
     goRoutines:        metrics.get('go_goroutines') ?? 0,
-    // EVM extras
     ...(evmStats ?? {}),
     timestamp:         Date.now(),
     scrapeOk:          true,

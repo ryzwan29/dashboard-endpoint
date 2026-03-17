@@ -9,9 +9,12 @@ export interface ChainConfig {
   metricsPort:  number
   restPort:     number
   rpcPort:      number
-  evmPort?:     number   // optional — EVM JSON-RPC (e.g. 8545)
-  wssPort?:     number   // optional — WebSocket RPC (e.g. 8546)
+  evmPort?:     number
+  wssPort?:     number
   testnet:      boolean
+  // Nginx access log path — all endpoints (rpc+api+evm+wss) log here
+  // Run add-nginx-logs.sh first to set this up
+  logFile:      string
 }
 
 export const CHAINS: ChainConfig[] = [
@@ -22,6 +25,7 @@ export const CHAINS: ChainConfig[] = [
     restPort:    10317,
     rpcPort:     10657,
     testnet:     false,
+    logFile:     '/var/log/nginx/axone.access.log',
   },
   {
     chainId:     'dungeon-1',
@@ -30,22 +34,7 @@ export const CHAINS: ChainConfig[] = [
     restPort:    11317,
     rpcPort:     11657,
     testnet:     false,
-  },
-  {
-    chainId:     'medasdigital-2',
-    name:        'Medas Digital',
-    metricsPort: 12660,
-    restPort:    12317,
-    rpcPort:     12657,
-    testnet:     false,
-  },
-  {
-    chainId:     'regen-1',
-    name:        'Regen',
-    metricsPort: 13660,
-    restPort:    13317,
-    rpcPort:     13657,
-    testnet:     false,
+    logFile:     '/var/log/nginx/dungeon.access.log',
   },
   {
     chainId:     'lumen',
@@ -54,6 +43,25 @@ export const CHAINS: ChainConfig[] = [
     restPort:    15317,
     rpcPort:     15657,
     testnet:     false,
+    logFile:     '/var/log/nginx/lumen.access.log',
+  },
+  {
+    chainId:     'regen-1',
+    name:        'Regen',
+    metricsPort: 13660,
+    restPort:    13317,
+    rpcPort:     13657,
+    testnet:     false,
+    logFile:     '/var/log/nginx/regen.access.log',
+  },
+  {
+    chainId:     'medasdigital-2',
+    name:        'Medas Digital',
+    metricsPort: 11660,
+    restPort:    11317,
+    rpcPort:     11657,
+    testnet:     false,
+    logFile:     '/var/log/nginx/medas.access.log',
   },
   {
     chainId:     'safro-test-1',
@@ -62,6 +70,7 @@ export const CHAINS: ChainConfig[] = [
     restPort:    50317,
     rpcPort:     50657,
     testnet:     true,
+    logFile:     '/var/log/nginx/safrochain.access.log',
   },
   {
     chainId:     'empe-testnet-2',
@@ -70,6 +79,7 @@ export const CHAINS: ChainConfig[] = [
     restPort:    51317,
     rpcPort:     51657,
     testnet:     true,
+    logFile:     '/var/log/nginx/empeiria.access.log',
   },
   {
     chainId:     'oro_1336-1',
@@ -80,6 +90,7 @@ export const CHAINS: ChainConfig[] = [
     evmPort:     52545,
     wssPort:     52546,
     testnet:     true,
+    logFile:     '/var/log/nginx/kiichain.access.log',
   },
   {
     chainId:     'raitestnet_77701-1',
@@ -90,6 +101,7 @@ export const CHAINS: ChainConfig[] = [
     evmPort:     53545,
     wssPort:     53546,
     testnet:     true,
+    logFile:     '/var/log/nginx/republic.access.log',
   },
   {
     chainId:     'push_42101-1',
@@ -100,18 +112,8 @@ export const CHAINS: ChainConfig[] = [
     evmPort:     54545,
     wssPort:     54546,
     testnet:     true,
+    logFile:     '/var/log/nginx/pushchain.access.log',
   },
-  // ── Add more chains here ──────────────────────────────────
-  // {
-  //   chainId:     'mychain-1',
-  //   name:        'MyChain',
-  //   metricsPort: 20660,
-  //   restPort:    20317,
-  //   rpcPort:     20657,
-  //   evmPort:     20545,   // only if EVM-compatible
-  //   wssPort:     20546,   // only if WSS supported
-  //   testnet:     false,
-  // },
 ]
 
 export const CHAIN_MAP = new Map<string, ChainConfig>(
