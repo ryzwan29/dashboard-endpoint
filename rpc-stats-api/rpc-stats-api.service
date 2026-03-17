@@ -1,0 +1,15 @@
+[Unit]
+Description=RPC Stats API
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/rpc-stats-api
+EnvironmentFile=/home/ubuntu/rpc-stats-api/.env
+ExecStart=/usr/bin/node /home/ubuntu/rpc-stats-api/dist/index.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
