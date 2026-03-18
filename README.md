@@ -109,8 +109,6 @@ dashboard-endpoint/
 │   ├── rpc-stats-api.service       # systemd unit (optional)
 │   └── package.json
 │
-├── loadtest-daily.js               # Daily load tester — 50k req/chain/day
-├── add-nginx-logs.sh               # Auto-add access_log to nginx chain configs
 └── README.md
 ```
 
@@ -319,13 +317,13 @@ pm2 startup    # auto-start on reboot
 
 server {
     listen 80;
-    server_name rpc.provewithryd.xyz;
+    server_name endpoint.provewithryd.xyz;
     return 301 https://$host$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name rpc.provewithryd.xyz;
+    server_name endpoint.provewithryd.xyz;
 
     ssl_certificate /etc/letsencrypt/live/provewithryd.xyz/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/provewithryd.xyz/privkey.pem;
@@ -349,7 +347,7 @@ server {
 ```bash
 ln -s /etc/nginx/sites-available/rpc-gateway.conf /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
-certbot --nginx -d rpc.provewithryd.xyz
+certbot --nginx -d endpoint.provewithryd.xyz
 ```
 
 ### Stats API — Nginx reverse proxy
@@ -386,28 +384,6 @@ nginx -t && systemctl reload nginx
 cd rpc-gateway
 npm run build
 # nginx serves dist/ automatically — no restart needed
-```
-
----
-
-## 📊 Daily Load Tester
-
-Sends **50,000 requests per chain per day** across all 10 chains (500k total/day), distributed naturally throughout 24 hours with random jitter between batches.
-
-```bash
-# Run on a local VM or separate machine
-node loadtest-daily.js
-
-# Or with PM2
-pm2 start loadtest-daily.js --name rpc-loadtest
-pm2 save
-```
-
-Configuration at the top of `loadtest-daily.js`:
-```javascript
-const DAILY_TARGET_PER_CHAIN = 50_000   // requests per chain per day
-const BATCH_SIZE             = 10       // requests per batch
-const CONCURRENCY            = 3        // parallel requests per batch
 ```
 
 ---
