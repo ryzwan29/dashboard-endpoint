@@ -122,6 +122,23 @@ export const mainnetNetworks: Network[] = [
     stake: 'https://explorer.provewithryd.xyz/medas-mainnet/staking/medasvaloper1npw0kkuh5gmw22nxpumax442fpxuz5uvu3atuq',
     logo: '/medas.png',
   },
+  {
+    id: 6,
+    title: 'Zigchain',
+    symbol: 'zigchain-1',
+    color: '#3b7de8',
+    chainId: 'zigchain-1',
+    statsApi: STATS_API,
+    rpc:     'https://rpc-zigchain.provewithryd.xyz',
+    wss:     '#',
+    grpc:    'https://grpc-zigchain.provewithryd.xyz',
+    grpcWeb: '#',
+    rest:    'https://api-zigchain.provewithryd.xyz',
+    evm:     '#',
+    stats: { total: '—', cached: '—', avgRps: '—', curRps: '—', blockTime: '—' },
+    stake: 'https://explorer.provewithryd.xyz/zigchain-mainnet/staking/zigvaloper1pjrjnkyunr8e8jrkgrzg4m64wp5tqzyeuf75yj',
+    logo: '/zigchain.jpg',
+  },
 ]
 
 // ── TESTNETS ────────────────────────────────────────────────────
